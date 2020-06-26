@@ -7,7 +7,7 @@ import { WebView } from "react-native-webview";
 // import { Button } from "native-base";
 import AppConfig from "./assets/screens/AppConfig";
 
-class DeepLink extends Component {
+class App extends Component {
   static navigationOptions = {
     title: "SplatNet2",
   };
@@ -41,21 +41,19 @@ class DeepLink extends Component {
       console.log("DeepLink Success");
     }
   };
+
+  render() {
+    return (
+      <NavigationContainer>
+        <TabNavigator />
+      </NavigationContainer>
+    );
+  }
 }
 
 class SalmonStats extends Component {
   render() {
     return <WebView source={{ uri: "https://salmon-stats.yuki.games/" }} />;
-  }
-}
-
-async function getOAuthURL() {
-  try {
-    let res = await fetch("https://salmonia.mydns.jp/");
-    let json = await res.json();
-    return json;
-  } catch (error) {
-    console.log(error);
   }
 }
 
@@ -111,10 +109,4 @@ function TabNavigator() {
   );
 }
 
-export default function App() {
-  return (
-    <NavigationContainer>
-      <TabNavigator />
-    </NavigationContainer>
-  );
-}
+export default App;

@@ -210,8 +210,8 @@ class AppConfig extends Component {
   render() {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Button title="SplatNet2" onPress={this.getIksmSession} />
-        <Button title="Generate URL" onPress={this.loginSplatNet2} />
+        <Button title="SplatNet2" onPress={this.loginSplatNet2} />
+        {/* <Button title="Generate URL" onPress={this.loginSplatNet2} /> */}
       </View>
     );
   }
