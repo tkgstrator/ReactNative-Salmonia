@@ -5,36 +5,42 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 // import { Button } from "native-base";
+import AppConfig from "./assets/screens/AppConfig";
 
-componentDidMount() {
-  // アンドロイドでDeepLink対応
-  if (Platform.OS === "android") {
-    Linking.getInitialURL()
-      .then(url => {
+class DeepLink extends Component {
+  static navigationOptions = {
+    title: "SplatNet2",
+  };
+
+  componentDidMount() {
+    // アンドロイドでDeepLink対応
+    if (Platform.OS === "android") {
+      Linking.getInitialURL().then((url) => {
         if (url) {
-          this.openFromUrlScheme(url)
+          this.openFromUrlScheme(url);
         }
-      })
+      });
+    }
   }
-}
 
-componentWillUnmount() {
-  Linking.removeEventListener("url", this.handleOpenURL)
-}
-
-handleOpenURL = event => {
-  if (event.url) {
-    this.openFromUrlScheme(event.url)
+  componentWillUnmount() {
+    Linking.removeEventListener("url", this.handleOpenURL);
   }
-}
 
-// DeepLinkを開いたときの挙動
-openFromUrlScheme = url => {
-  console.log(url)
-  const parsedURL = parse(url, true)
-  if (parsedURL.protocol === "npf71b963c1b7b6d119") {
-    console.log("DeepLink Success")
-  }
+  handleOpenURL = (event) => {
+    if (event.url) {
+      this.openFromUrlScheme(event.url);
+    }
+  };
+
+  // DeepLinkを開いたときの挙動
+  openFromUrlScheme = (url) => {
+    console.log(url);
+    const parsedURL = parse(url, true);
+    if (parsedURL.protocol === "npf71b963c1b7b6d119") {
+      console.log("DeepLink Success");
+    }
+  };
 }
 
 class SalmonStats extends Component {
@@ -52,24 +58,6 @@ async function getOAuthURL() {
     console.log(error);
   }
 }
-class Config extends Component {
-  loginSplatNet2 = async () => {
-    // 押下したらログインのための情報を取得する
-    let oauth = await getOAuthURL();
-    let auth_code_verifier = oauth["auth_code_verifier"];
-    let auth_url = oauth["auth_url"];
-    Linking.openURL(auth_url).catch((err) => console.error("Invalid URL"), err);
-    console.log(auth_url, auth_code_verifier);
-  };
-  render() {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Button title="SplatNet2" onPress={this.loginSplatNet2} />
-        {/* <Text>Notifications!</Text> */}
-      </View>
-    );
-  }
-}
 
 function Profile() {
   return (
@@ -81,7 +69,7 @@ function Profile() {
 
 const Tab = createBottomTabNavigator();
 
-function MyTabs() {
+function TabNavigator() {
   return (
     <Tab.Navigator
       initialRouteName="Feed"
@@ -101,7 +89,7 @@ function MyTabs() {
       />
       <Tab.Screen
         name="Config"
-        component={Config}
+        component={AppConfig}
         options={{
           tabBarLabel: "Config",
           tabBarIcon: ({ color, size }) => (
@@ -126,7 +114,7 @@ function MyTabs() {
 export default function App() {
   return (
     <NavigationContainer>
-      <MyTabs />
+      <TabNavigator />
     </NavigationContainer>
   );
 }
