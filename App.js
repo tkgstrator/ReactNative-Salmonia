@@ -1,27 +1,34 @@
 import React, { Component } from "react";
-import { Text, View, Alert, Button, WebView } from "react-native";
+import { Text, View, Alert, Button, Linking } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { WebView } from "react-native-webview";
 // import { Button } from "native-base";
 
 class SalmonStats extends Component {
   render() {
-    return <WebView source={{ uri: "https://logrocket.com/" }} />;
+    return <WebView source={{ uri: "https://salmon-stats.yuki.games/" }} />;
   }
 }
 
-function Profile() {
-  return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Profile!</Text>
-    </View>
-  );
+async function getOAuthURL() {
+  try {
+    let res = await fetch("https://salmonia.mydns.jp/");
+    let json = await res.json();
+    return json;
+  } catch (error) {
+    console.log(error);
+  }
 }
-
 class Config extends Component {
-  loginSplatNet2 = () => {
-    Alert.alert("Login!");
+  loginSplatNet2 = async () => {
+    // 押下したらログインのための情報を取得する
+    let oauth = await getOAuthURL();
+    let auth_code_verifier = oauth["auth_code_verifier"];
+    let auth_url = oauth["auth_url"];
+    Linking.openURL(auth_url).catch((err) => console.error("Invalid URL"), err);
+    console.log(auth_url, auth_code_verifier);
   };
   render() {
     return (
@@ -31,6 +38,14 @@ class Config extends Component {
       </View>
     );
   }
+}
+
+function Profile() {
+  return (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <Text>Profile!</Text>
+    </View>
+  );
 }
 
 const Tab = createBottomTabNavigator();
