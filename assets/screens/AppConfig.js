@@ -25,6 +25,7 @@ class AppConfig extends Component {
     let oauth = await getOAuthURL();
     this.state.auth_code_verifier = oauth["auth_code_verifier"];
     this.state.auth_url = oauth["auth_url"];
+    console.log(this.state.auth_url)
     Linking.openURL(this.state.auth_url);
   };
 
@@ -32,6 +33,7 @@ class AppConfig extends Component {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <Button title="SplatNet2" onPress={this.loginSplatNet2} />
+        <Button title="OAuth" onPress={() => Linking.openURL("npf71b963c1b7b6d119://auth/")} />
         {/* <Button title="Generate URL" onPress={this.loginSplatNet2} /> */}
       </View>
     );

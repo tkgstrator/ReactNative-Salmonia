@@ -1,46 +1,53 @@
 import React, { Component } from "react";
-import { Text, View, Alert, Button, Linking, Platform } from "react-native";
+import { Text, View, Linking } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-// import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
-// import { Button } from "native-base";
+import DeepLinking from "react-native-deep-linking";
 import AppConfig from "./assets/screens/AppConfig";
 
+const handleUrl = ({ url }) => {
+  Linking.canOpenURL(url).then((link) => {
+    if (link) {
+      DeepLinking.evaluateUrl(url);
+    }
+  });
+};
+
 class App extends Component {
-  static navigationOptions = {
-    title: "SplatNet2",
-  };
+  state = {
+    response: {}
+  }
 
   componentDidMount() {
-    // アンドロイドでDeepLink対応
-    if (Platform.OS === "android") {
-      Linking.getInitialURL().then((url) => {
-        if (url) {
-          this.openFromUrlScheme(url);
-        }
-      });
-    }
+    console.log("Setup DeepLink")
+    DeepLinking.addScheme("npf71b963c1b7b6d119://")
+    Linking.addEventListener('url', this.handleOpenURL);
+
+    DeepLinking.addRoute("/auth", ({ scheme, path }) => {
+      console.log(scheme);
+      console.log(path);
+    });
+
+    Linking.getInitialURL().then((link) => {
+      if (link) {
+        console.log(link)
+      }
+    }).catch(err => console.error("ERROR!", err));
   }
 
   componentWillUnmount() {
-    Linking.removeEventListener("url", this.handleOpenURL);
+    console.log("Remove DeepLink")
+    Linking.removeEventListener('url', this.handleOpenURL);
   }
 
-  handleOpenURL = (event) => {
-    if (event.url) {
-      this.openFromUrlScheme(event.url);
-    }
-  };
-
-  // DeepLinkを開いたときの挙動
-  openFromUrlScheme = (url) => {
-    console.log(url);
-    const parsedURL = parse(url, true);
-    if (parsedURL.protocol === "npf71b963c1b7b6d119") {
-      console.log("DeepLink Success");
-    }
-  };
+  handleOpenURL = (url) => {
+    Linking.canOpenURL.then((link) => {
+      if (link) {
+        DeepLinking.evaluateUrl(url)
+      }
+    });
+  }
 
   render() {
     return (
@@ -84,7 +91,8 @@ function TabNavigator() {
       />
       <Tab.Screen
         name="Config"
-        component={() => <AppConfig />}
+        // component={() => <AppConfig />}
+        component={AppConfig}
         options={{
           tabBarLabel: "Config",
         }}
