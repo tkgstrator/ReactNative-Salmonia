@@ -6,14 +6,6 @@ import { WebView } from "react-native-webview";
 import DeepLinking from "react-native-deep-linking";
 import AppConfig from "./assets/screens/AppConfig";
 
-const handleUrl = ({ url }) => {
-  Linking.canOpenURL(url).then((link) => {
-    if (link) {
-      DeepLinking.evaluateUrl(url);
-    }
-  });
-};
-
 class App extends Component {
   state = {
     response: {}
@@ -24,9 +16,8 @@ class App extends Component {
     DeepLinking.addScheme("npf71b963c1b7b6d119://")
     Linking.addEventListener('url', this.handleOpenURL);
 
-    DeepLinking.addRoute("/auth", ({ scheme, path }) => {
-      console.log(scheme);
-      console.log(path);
+    DeepLinking.addRoute('/auth', (response) => {
+      this.setState({ response });
     });
 
     Linking.getInitialURL().then((link) => {
