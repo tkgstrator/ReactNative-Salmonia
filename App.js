@@ -6,38 +6,59 @@ import { WebView } from "react-native-webview";
 import DeepLinking from "react-native-deep-linking";
 import AppConfig from "./assets/screens/AppConfig";
 
+global.auth_code_verifier = String
+
+async function getSessionToken(session_token_code, auth_code_verifier) {
+  console.log(auth_code_verifier)
+  let url = "https://accounts.nintendo.com/connect/1.0.0/api/session_token";
+  let app_head = new Headers({
+    "User-Agent": "OnlineLounge/1.6.1.2 NASDKAPI Android",
+    "Accept-Language": "en-US",
+    Accept: "application/json",
+    "Content-Length": "541",
+    Host: "accounts.nintendo.com",
+    Connecton: "Keep-Alive",
+    "Accept-Encoding": "gzip",
+  });
+  let body = {
+    client_id: "71b963c1b7b6d119",
+    session_token_code: session_token_code,
+    session_token_code_verifier: auth_code_verifier,
+  };
+
+  console.log(JSON.stringify(body))
+  try {
+    let res = await fetch(url, {
+      method: "POST",
+      headers: app_head,
+      body: JSON.stringify(body),
+    });
+    let json = await res.json();
+    console.log("SESSION_TOKEN", json);
+    return json["session_token"];
+  } catch (error) {
+    console.log(error);
+  }
+}
+
 class App extends Component {
   state = {
     response: {}
   }
 
   componentDidMount() {
-    console.log("Setup DeepLink")
-    DeepLinking.addScheme("npf71b963c1b7b6d119://")
-    Linking.addEventListener('url', this.handleOpenURL);
-
-    DeepLinking.addRoute('/auth', (response) => {
-      this.setState({ response });
-    });
-
-    Linking.getInitialURL().then((link) => {
-      if (link) {
-        console.log(link)
-      }
-    }).catch(err => console.error("ERROR!", err));
+    Linking.addEventListener("url", this.handleOpenURL);
   }
 
   componentWillUnmount() {
-    console.log("Remove DeepLink")
     Linking.removeEventListener('url', this.handleOpenURL);
   }
 
-  handleOpenURL = (url) => {
-    Linking.canOpenURL.then((link) => {
-      if (link) {
-        DeepLinking.evaluateUrl(url)
-      }
-    });
+  handleOpenURL = (deeplink) => {
+    this.state.session_token_code = deeplink.url.match("de=(.*)&")[1];
+
+    let session_token = getSessionToken(this.state.session_token_code, global.auth_code_verifier)
+    console.log(this.state.session_token_code)
   }
 
   render() {
