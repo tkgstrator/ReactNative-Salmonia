@@ -3,6 +3,7 @@ import { Text, View, Linking, AsyncStorage } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { WebView } from "react-native-webview";
+import Icon from "react-native-vector-icons/FontAwesome";
 import AppConfig from "./assets/screens/AppConfig";
 
 global.auth_code_verifier = String
@@ -289,14 +290,6 @@ class SalmonStats extends Component {
   }
 }
 
-function Profile() {
-  return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Profile!</Text>
-    </View>
-  );
-}
-
 const Tab = createBottomTabNavigator();
 
 function TabNavigator() {
@@ -312,21 +305,19 @@ function TabNavigator() {
         component={SalmonStats}
         options={{
           tabBarLabel: "SalmonStats",
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="snowflake-o" style={{ fontSize: 20, color: "blue" }} />
+          ),
         }}
       />
       <Tab.Screen
         name="Config"
-        // component={() => <AppConfig />}
         component={AppConfig}
         options={{
           tabBarLabel: "Config",
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={Profile}
-        options={{
-          tabBarLabel: "Profile",
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="gears" style={{ fontSize: 20, color: "blue" }} />
+          ),
         }}
       />
     </Tab.Navigator>
