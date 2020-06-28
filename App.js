@@ -1,10 +1,10 @@
 import React, { Component } from "react";
-import { Text, View, Linking, AsyncStorage } from "react-native";
+import { Alert, Linking, AsyncStorage } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { WebView } from "react-native-webview";
 import Icon from "react-native-vector-icons/FontAwesome";
 import AppConfig from "./assets/screens/AppConfig";
+import SalmonStats from "./assets/screens/SalmonStats";
 
 global.auth_code_verifier = String
 
@@ -254,6 +254,7 @@ async function getSessionToken(session_token_code, auth_code_verifier) {
   let iksm_session = cookie.substr(13, 40)
 
   await AsyncStorage.setItem("@iksm_session:key", iksm_session)
+  Alert.alert("Login Success!");
 }
 
 class App extends Component {
@@ -284,11 +285,7 @@ class App extends Component {
   }
 }
 
-class SalmonStats extends Component {
-  render() {
-    return <WebView source={{ uri: "https://salmon-stats.yuki.games/" }} />;
-  }
-}
+
 
 const Tab = createBottomTabNavigator();
 
