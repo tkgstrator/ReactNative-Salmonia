@@ -4,7 +4,7 @@ import { WebView } from "react-native-webview"
 class SalmonStats extends Component {
 
     render() {
-        return <WebView source={{ uri: "https://salmon-stats.yuki.games/" }} />;
+        return <WebView source={{ uri: "https://salmon-stats-api.yuki.games/auth/twitter" }} />;
     }
 }
 
