@@ -99,7 +99,8 @@ async function callS2SAPI(access_token, timestamp, ver) {
   return hash
 }
 
-async function callFlapgAPI(access_token, timestamp, guid, type, ver) {
+async function callFlapgAPI(access_token, guid, type, ver) {
+  let timestamp = String(parseInt(new Date().getTime() / 1000))
   // Call s2s API
   let hash = await callS2SAPI(access_token, timestamp, ver)
   // Call flapg API
@@ -193,6 +194,7 @@ async function getSplatoonAccessToken(splatoon_token, flapg_app) {
   let json = await response.json()
   let splatoon_access_token = json["result"]["accessToken"]
   console.log("Splatoon Access Token", splatoon_access_token)
+  return splatoon_access_token
 }
 
 async function getIksmSession(splatoon_access_token, ver) {
@@ -209,7 +211,7 @@ async function getIksmSession(splatoon_access_token, ver) {
     "Connection": "keep-alive",
     "DNT": "0",
     "Cookie": "iksm_session=", // 空にして常に再生成する
-    "User-Agent": "Salmonia for iOS/" + ver,
+    // "User-Agent": "Salmonia for iOS/" + ver,
     "X-Requested-With": "com.nintendo.znca"
   }
   let response = await fetch(url, {
@@ -218,21 +220,22 @@ async function getIksmSession(splatoon_access_token, ver) {
   });
   let cookie = response.headers.get("set-cookie")
   let iksm_session = cookie.substr(13, 40)
+  console.log("iksm_session", splatoon_access_token, iksm_session)
   return iksm_session
 }
 
 async function loginSplatNet2(code, verifier) {
   let ver = "1.0.0"
   let guid = "037239ef-1914-43dc-815d-178aae7d8934"
-  let timestamp = String(parseInt(new Date().getTime() / 1000))
 
   let session_token = await getSessionToken(code, verifier)
   let access_token = await getAccessToken(session_token)
-  let flapg_nso = await callFlapgAPI(access_token, timestamp, guid, "nso", ver)
+  let flapg_nso = await callFlapgAPI(access_token, guid, "nso", ver)
   let splatoon_token = await getSplatoonToken(flapg_nso)
-  let flapg_app = await callFlapgAPI(splatoon_token, timestamp, guid, "app", ver)
+  let flapg_app = await callFlapgAPI(splatoon_token, guid, "app", ver)
   let splatoon_access_token = await getSplatoonAccessToken(splatoon_token, flapg_app)
   let iksm_session = await getIksmSession(splatoon_access_token, ver)
+  console.log(iksm_session)
   await AsyncStorage.setItem("@iksm_session:key", iksm_session)
   Alert.alert("Login Success!");
 }
