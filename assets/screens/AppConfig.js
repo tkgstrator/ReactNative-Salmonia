@@ -1,8 +1,11 @@
 import React, { Component } from "react";
-import { Alert, Linking, AsyncStorage, StyleSheet } from "react-native";
+import { Alert, Linking, AsyncStorage, StyleSheet, View } from "react-native";
 import CookieManager from '@react-native-community/cookies';
-import { Container, Header, Left, Body, Right, Title, Button } from "native-base";
-import { Content, List, ListItem, Text, Icon, Switch, Thumbnail } from "native-base";
+import { Container, Content, Text, Button } from "native-base";
+import Modal from "react-native-modal";
+import * as Progress from "react-native-progress";
+
+// import ModalProgress from "./ModalProgress"
 
 global.auth_code_verifier = String
 
@@ -252,11 +255,13 @@ async function getIksmSession(splatoon_access_token, ver) {
   return iksm_session
 }
 
-async function loginSplatNet2(code, verifier) {
+
+async function regenerateIksmSession() {
   let ver = "1.0.1"
   let guid = "037239ef-1914-43dc-815d-178aae7d8934"
 
-  let session_token = await getSessionToken(code, verifier)
+  let session_token = await AsyncStorage.getItem("@session_token:key")
+  // let session_token = await getSessionToken(code, verifier)
   let access_token = await getAccessToken(session_token)
   let flapg_nso = await callFlapgAPI(access_token, guid, "nso", ver)
   let splatoon_token = await getSplatoonToken(flapg_nso)
@@ -264,12 +269,71 @@ async function loginSplatNet2(code, verifier) {
   let splatoon_access_token = await getSplatoonAccessToken(splatoon_token, flapg_app)
   let iksm_session = await getIksmSession(splatoon_access_token, ver)
   await AsyncStorage.setItem("@iksm_session:key", iksm_session)
-  await AsyncStorage.setItem("@session_token:key", session_token)
-  console.log(iksm_session)
-  Alert.alert("TEST!");
+}
+
+async function getJobNum() {
+  let iksm_session = await AsyncStorage.getItem("@iksm_session:key")
+  let url = "https://app.splatoon2.nintendo.net/api/coop_results"
+  let header = {
+    "cookie": "iksm_session=" + iksm_session,
+  }
+  let response = await fetch(url, {
+    method: "GET",
+    headers: header,
+  });
+  let json = await response.json()
+  try {
+    let job_num = json["summary"]["card"]["job_num"] // 最新のバイトID
+    console.log(job_num)
+    return job_num
+  } catch {
+    // これでちゃんと動くんかいな？
+    await regenerateIksmSession()
+    getJobNum()
+  }
+}
+
+async function getResultFromSplatNet2(job_num) {
+  let iksm_session = await AsyncStorage.getItem("@iksm_session:key")
+  let url = "https://app.splatoon2.nintendo.net/api/coop_results/" + job_num
+  let header = {
+    "cookie": "iksm_session=" + iksm_session
+  }
+  let response = await fetch(url, {
+    method: "GET",
+    headers: header,
+  });
+  let result = await response.json()
+  return result
+}
+
+async function uploadResultToSalmonStats(result) {
+  let api_token = await AsyncStorage.getItem("@api_token:key")
+  let url = "https://salmon-stats-api.yuki.games/api/results"
+  let header = {
+    "Content-type": "application/json",
+    "Authorization": "Bearer " + api_token
+  }
+  let body = { "results": [result] }
+  let response = await fetch(url, {
+    method: "POST",
+    headers: header,
+    body: JSON.stringify(body)
+  });
+  return response.status
 }
 
 class AppConfig extends Component {
+  state = {
+    isModalVisible: false,
+    text: String,
+    now: 10,
+    length: 100
+  }
+
+  toggleModal = async () => {
+    this.setState({ isModalVisible: !this.state.isModalVisible })
+  }
 
   componentDidMount() {
     Linking.addEventListener("url", this.handleOpenURL);
@@ -281,7 +345,7 @@ class AppConfig extends Component {
 
   handleOpenURL = (deeplink) => {
     let session_token_code = deeplink.url.match("de=(.*)&")[1];
-    loginSplatNet2(session_token_code, global.auth_code_verifier)
+    this.loginSplatNet2(session_token_code, global.auth_code_verifier)
   }
 
   loginNintendoSwitchOnline = async () => {
@@ -311,90 +375,116 @@ class AppConfig extends Component {
     Alert.alert("Login Success!");
   }
 
+  loginSplatNet2 = async (code, verifier) => {
+    let ver = "1.0.1"
+    let guid = "037239ef-1914-43dc-815d-178aae7d8934"
+
+    this.toggleModal() // モーダルプログレスバー表示
+    this.setState({ text: "session_tokenを取得しています", now: 0, length: 6 })
+    let session_token = await getSessionToken(code, verifier)
+    this.setState({ text: "access_tokenを取得しています", now: 1 })
+    let access_token = await getAccessToken(session_token)
+    this.setState({ text: "fを取得しています(1/2)", now: 2 })
+    let flapg_nso = await callFlapgAPI(access_token, guid, "nso", ver)
+    this.setState({ text: "splatoon_tokenを取得しています", now: 3 })
+    let splatoon_token = await getSplatoonToken(flapg_nso)
+    this.setState({ text: "fを取得しています(2/2)", now: 4 })
+    let flapg_app = await callFlapgAPI(splatoon_token, guid, "app", ver)
+    this.setState({ text: "splatoon_access_tokenを取得しています", now: 5 })
+    let splatoon_access_token = await getSplatoonAccessToken(splatoon_token, flapg_app)
+    this.setState({ text: "iksm_sessionを取得しています", now: 6 })
+    let iksm_session = await getIksmSession(splatoon_access_token, ver)
+    await AsyncStorage.setItem("@iksm_session:key", iksm_session)
+    await AsyncStorage.setItem("@session_token:key", session_token)
+    this.toggleModal() // モーダルプログレスバー表示
+  }
+
   getResults = async () => {
+    this.setState({ now: 0 })
+    this.toggleModal() // モーダルプログレスバー表示
+
+    this.setState({ text: "認証キーを確認しています(1/2)" })
     let iksm_session = await AsyncStorage.getItem("@iksm_session:key")
     if (iksm_session == null) {
       Alert.alert("iksm_session is not set!");
+      return
     }
+
+    this.setState({ text: "認証キーを確認しています(2/2)" })
     let api_token = await AsyncStorage.getItem("@api_token:key")
     if (api_token == null) {
       Alert.alert("api_token is not set!");
+      return
     }
-    let url, body, header, response, json
 
-    url = "https://app.splatoon2.nintendo.net/api/coop_results"
-    header = {
-      "cookie": "iksm_session=" + iksm_session,
-    }
-    response = await fetch(url, {
-      method: "GET",
-      headers: header,
-    });
-    json = await response.json()
-    let max = json["summary"]["card"]["job_num"] // 最新のバイトID
+    this.setState({ text: "最新のバイトIDを取得しています" })
+    let max = await getJobNum()
     let min = await AsyncStorage.getItem("@job_num:key") == null ? max - 49 : await AsyncStorage.getItem("@job_num:key")
 
-    console.log("InfoMgr:", api_token, iksm_session, max, min)
-    for (let job_num = min; job_num <= max; job_num++) {
-      // Get Result from SplatNet2
-      console.log("Downloading JobID", min)
-      url = "https://app.splatoon2.nintendo.net/api/coop_results/" + job_num
-      header = {
-        "cookie": "iksm_session=" + iksm_session
-      }
-      response = await fetch(url, {
-        method: "GET",
-        headers: header,
-      });
-      json = await response.json()
-      // Upload Result to Salmon Stats
-      url = "https://salmon-stats-api.yuki.games/api/results"
-      header = {
-        "Content-type": "application/json",
-        "Authorization": "Bearer " + api_token
-      }
-      body = { "results": [json] }
-      response = await fetch(url, {
-        method: "POST",
-        headers: header,
-        body: JSON.stringify(body)
-      });
-      console.log(response.status)
-      console.log("Uploading JobID", job_num)
+    min = max - 9
+    console.log("JOB ID", max, min)
+    if (max == min) {
+      return
     }
-    // 最新のバイトIDに更新する
+    this.setState({ length: max - min + 1 })
+
+    for (let job_num = min; job_num <= max; job_num++) {
+      this.setState({ text: "リザルトを取得しています" })
+      this.setState({ now: job_num - min + 1 })
+
+      let result = await getResultFromSplatNet2(job_num)
+      let response = await uploadResultToSalmonStats(result)
+    }
+    this.toggleModal()
     await AsyncStorage.setItem("@job_num:key", max.toString()) // 何故かString型にしないといけない（なぜ）
-    Alert.alert("Complete!");
+    return
   }
 
   render() {
     return (
-      <Container>
-        <Header />
-        <Content style={style.content}>
-          <Button block large onPress={this.loginNintendoSwitchOnline}>
-            <Text>Login SplatNet2</Text>
+      <Container style={{ alignItems: "center" }}>
+        {/* <Header /> */}
+        <Modal isVisible={this.state.isModalVisible}>
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }}>
+            <Progress.Pie animated={true} indeterminate={false} progress={this.state.now / this.state.length} size={200} />
+            <View style={{ flexDirection: "column" }}>
+              <Text>Developer @tkgling</Text>
+              <Text>Special Thanks @ckoshien_tech</Text>
+              <Text>AppIcon Design @barley_ural</Text>
+              <Text>External API @frozenpandaman</Text>
+              <Text>External API @nexusmine</Text>
+              <Text>External API @yukinkling</Text>
+            </View>
+            <Text>{this.state.text}</Text>
+          </View>
+        </Modal>
+        <View style={style.content}>
+          <Button block large onPress={this.loginNintendoSwitchOnline} style={style.button}>
+            <Text uppercase={false}>Login SplatNet2</Text>
           </Button>
-          <Button block large onPress={this.loginSalmonStats}>
-            <Text>Login Salmon Stats</Text>
+        </View>
+        <View style={style.content}>
+          <Button block large onPress={this.loginSalmonStats} style={style.button}>
+            <Text uppercase={false}>Login Salmon Stats</Text>
           </Button>
-          <Button block large onPress={this.getResults}>
-            <Text>Upload Your Results</Text>
+        </View>
+        <View style={style.content}>
+          <Button block large onPress={this.getResults} style={style.button}>
+            <Text uppercase={false}>Upload Your Results</Text>
           </Button>
-        </Content>
-      </Container>
-      // <Button title="SplatNet2" onPress={this.loginSplatNet2} />
-      // <Button title="SalmonStats" onPress={this.loginSalmonStats} />
-      // <Button title="Download Result from SplatNet2" onPress={this.getResults} />
+        </View>
+      </Container >
     );
   }
 }
 
 const style = StyleSheet.create({
   content: {
-    flex: 1,
-    backgroundColor: "#F0F0F0"
-  }
+    paddingBottom: 50,
+    // borderRadius: 10,
+    width: "80%",
+    alignSelf: "center",
+  },
 })
 
 export default AppConfig;
