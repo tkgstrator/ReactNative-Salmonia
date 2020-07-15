@@ -252,6 +252,8 @@ async function getIksmSession(splatoon_access_token, ver) {
   });
   let cookie = response.headers.get("set-cookie")
   let iksm_session = cookie.substr(13, 40)
+  //iksmセッションを取り出したらcookieクリア
+  await CookieManager.clearAll();
   return iksm_session
 }
 
