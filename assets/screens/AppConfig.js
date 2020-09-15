@@ -5,8 +5,6 @@ import { Container, Content, Text, Button } from "native-base";
 import Modal from "react-native-modal";
 import * as Progress from "react-native-progress";
 
-// import ModalProgress from "./ModalProgress"
-
 global.auth_code_verifier = String
 
 export interface Cookie {
@@ -47,7 +45,7 @@ async function getSessionToken(session_token_code, auth_code_verifier) {
     "Host": "accounts.nintendo.com",
     "Content-Type": "application/json",
     "Connecton": "keep-alive",
-    "User-Agent": "com.nintendo.znca/1.6.1.2 (Android/7.1.2)",
+    "User-Agent": "com.nintendo.znca/1.9.0 (Android/7.1.2)",
     "Accept": "*/*",
     "Content-Length": "555",
     "Accept-Language": "en-ca",
@@ -77,7 +75,7 @@ async function getAccessToken(session_token) {
     "Host": "accounts.nintendo.com",
     "Content-Type": "application/json",
     "Connecton": "keep-alive",
-    "User-Agent": "com.nintendo.znca/1.6.1.2 (Android/7.1.2)",
+    "User-Agent": "com.nintendo.znca/1.9.0 (Android/7.1.2)",
     "Accept": "*/*",
     "Content-Length": "439",
     "Accept-Language": "en-US",
@@ -109,6 +107,7 @@ async function callS2SAPI(access_token, timestamp, ver) {
   // s2s APIだけ何故かBodyの形式が違うので変換
   const queryString = require('query-string');
   body = queryString.stringify(body)
+  console.log(body)
   let header = {
     "Host": "elifessler.com",
     "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
@@ -173,10 +172,10 @@ async function getSplatoonToken(flapg_nso) {
   let header = {
     "Host": "api-lp1.znc.srv.nintendo.net",
     "Accept": "*/*",
-    "X-ProductVersion": "1.6.1.2",
+    "X-ProductVersion": "1.9.0",
     "Accept-Language": "en-US",
     "Accept-Encoding": "gzip, deflate, br",
-    "User-Agent": "com.nintendo.znca/1.6.1.2 (Android/7.1.2)",
+    "User-Agent": "com.nintendo.znca/1.9.0 (Android/7.1.2)",
     "Content-Type": "application/json; charset=utf-8",
     "Connection": "keep-alive",
     "Authorization": "Bearer",
@@ -199,9 +198,9 @@ async function getSplatoonAccessToken(splatoon_token, flapg_app) {
   let url = "https://api-lp1.znc.srv.nintendo.net/v2/Game/GetWebServiceToken"
   let header = {
     "Host": "api-lp1.znc.srv.nintendo.net",
-    "User-Agent": "com.nintendo.znca/1.6.1.2 Android",
+    "User-Agent": "com.nintendo.znca/1.9.0 Android",
     "Accept": "application/json",
-    "X-ProductVersion": "1.6.1.2",
+    "X-ProductVersion": "1.9.0",
     "Content-Type": "application/json; charset=utf-8",
     "Connection": "Keep-Alive",
     "Authorization": "Bearer " + splatoon_token,
@@ -242,9 +241,9 @@ async function getIksmSession(splatoon_access_token, ver) {
     "X-IsAnalyticsOptedIn": "false",
     "Connection": "keep-alive",
     "DNT": "0",
-    "Cookie": "iksm_session=35c3d82324d581dab005c8f3ef0c21bd0ff832d5", // 空にして常に再生成する
-    // "User-Agent": "Salmonia for iOS/" + ver,
-    "X-Requested-With": "com.nintendo.znca"
+    "Cookie": "iksm_session=", // 空にして常に再生成する
+    "User-Agent": "Salmonia for iOS/" + ver,
+    "X-Requested-With": "com.nintendo.znca",
   }
   let response = await fetch(url, {
     method: "GET",
@@ -252,56 +251,20 @@ async function getIksmSession(splatoon_access_token, ver) {
   });
   let cookie = response.headers.get("set-cookie")
   let iksm_session = cookie.substr(13, 40)
+  console.log(iksm_session)
   return iksm_session
-}
-
-
-async function regenerateIksmSession() {
-  let ver = "1.0.1"
-  let guid = "037239ef-1914-43dc-815d-178aae7d8934"
-
-  let session_token = await AsyncStorage.getItem("@session_token:key")
-  // let session_token = await getSessionToken(code, verifier)
-  let access_token = await getAccessToken(session_token)
-  let flapg_nso = await callFlapgAPI(access_token, guid, "nso", ver)
-  let splatoon_token = await getSplatoonToken(flapg_nso)
-  let flapg_app = await callFlapgAPI(splatoon_token, guid, "app", ver)
-  let splatoon_access_token = await getSplatoonAccessToken(splatoon_token, flapg_app)
-  let iksm_session = await getIksmSession(splatoon_access_token, ver)
-  await AsyncStorage.setItem("@iksm_session:key", iksm_session)
-}
-
-async function getJobNum() {
-  let iksm_session = await AsyncStorage.getItem("@iksm_session:key")
-  let url = "https://app.splatoon2.nintendo.net/api/coop_results"
-  let header = {
-    "cookie": "iksm_session=" + iksm_session,
-  }
-  let response = await fetch(url, {
-    method: "GET",
-    headers: header,
-  });
-  let json = await response.json()
-  try {
-    let job_num = json["summary"]["card"]["job_num"] // 最新のバイトID
-    console.log(job_num)
-    return job_num
-  } catch {
-    // これでちゃんと動くんかいな？
-    await regenerateIksmSession()
-    getJobNum()
-  }
 }
 
 async function getResultFromSplatNet2(job_num) {
   let iksm_session = await AsyncStorage.getItem("@iksm_session:key")
   let url = "https://app.splatoon2.nintendo.net/api/coop_results/" + job_num
   let header = {
-    "cookie": "iksm_session=" + iksm_session
+    "cookie": "iksm_session=" + iksm_session,
   }
   let response = await fetch(url, {
     method: "GET",
     headers: header,
+
   });
   let result = await response.json()
   return result
@@ -327,8 +290,8 @@ class AppConfig extends Component {
   state = {
     isModalVisible: false,
     text: String,
-    now: 10,
-    length: 100
+    now: 0,
+    length: 1
   }
 
   toggleModal = async () => {
@@ -360,7 +323,6 @@ class AppConfig extends Component {
       Alert.alert("Login Salmon Stats First!");
       return
     }
-    console.log(cookie)
     let url = "https://salmon-stats-api.yuki.games/api-token"
     let header = {
       "Cookie": "laravel_session=" + cookie
@@ -370,7 +332,6 @@ class AppConfig extends Component {
       headers: header,
     });
     let api_token = await response.json()
-    console.log(api_token["api_token"])
     await AsyncStorage.setItem("@api_token:key", api_token["api_token"])
     Alert.alert("Login Success!");
   }
@@ -399,14 +360,61 @@ class AppConfig extends Component {
     this.toggleModal() // モーダルプログレスバー表示
   }
 
+  regenerateIksmSession = async () => {
+    let ver = "1.0.1"
+    let guid = "037239ef-1914-43dc-815d-178aae7d8934"
+
+    let session_token = await AsyncStorage.getItem("@session_token:key")
+    this.setState({ text: "access_tokenを取得しています", now: 0, length: 5 })
+    let access_token = await getAccessToken(session_token)
+    this.setState({ text: "fを取得しています(1/2)", now: 1 })
+    let flapg_nso = await callFlapgAPI(access_token, guid, "nso", ver)
+    this.setState({ text: "splatoon_tokenを取得しています", now: 2 })
+    let splatoon_token = await getSplatoonToken(flapg_nso)
+    this.setState({ text: "fを取得しています(2/2)", now: 3 })
+    let flapg_app = await callFlapgAPI(splatoon_token, guid, "app", ver)
+    this.setState({ text: "splatoon_access_tokenを取得しています", now: 4 })
+    let splatoon_access_token = await getSplatoonAccessToken(splatoon_token, flapg_app)
+    this.setState({ text: "iksm_sessionを取得しています", now: 5 })
+    let iksm_session = await getIksmSession(splatoon_access_token, ver)
+    await AsyncStorage.setItem("@iksm_session:key", iksm_session)
+  }
+
+  getJobNum = async () => {
+    let iksm_session = await AsyncStorage.getItem("@iksm_session:key")
+    let url = "https://app.splatoon2.nintendo.net/api/coop_results"
+    let header = {
+      "cookie": "iksm_sessions=" + iksm_session,
+      "Cache-Control": "no-store"
+    }
+    let response = await fetch(url, {
+      method: "GET",
+      cache: "no-cache",
+      headers: header,
+    });
+    let json = await response.json()
+    // console.log(json)
+    try {
+      let job_num = json["summary"]["card"]["job_num"] // 最新のバイトID
+      console.log(job_num)
+      return job_num
+    } catch {
+      // 多分動くんちゃうかな、多分
+      await this.regenerateIksmSession()
+      await this.getJobNum()
+    }
+  }
+
   getResults = async () => {
     this.setState({ now: 0 })
     this.toggleModal() // モーダルプログレスバー表示
 
     this.setState({ text: "認証キーを確認しています(1/2)" })
     let iksm_session = await AsyncStorage.getItem("@iksm_session:key")
+
     if (iksm_session == null) {
       Alert.alert("iksm_session is not set!");
+      this.toggleModal() // モーダルプログレスバー閉じる
       return
     }
 
@@ -414,16 +422,18 @@ class AppConfig extends Component {
     let api_token = await AsyncStorage.getItem("@api_token:key")
     if (api_token == null) {
       Alert.alert("api_token is not set!");
+      this.toggleModal() // モーダルプログレスバー閉じる
       return
     }
 
     this.setState({ text: "最新のバイトIDを取得しています" })
-    let max = await getJobNum()
+    let max = await this.getJobNum()
     let min = await AsyncStorage.getItem("@job_num:key") == null ? max - 49 : await AsyncStorage.getItem("@job_num:key")
 
-    min = max - 9
     console.log("JOB ID", max, min)
     if (max == min) {
+      this.setState({ text: "新しいバイト履歴がありません" })
+      this.toggleModal() // モーダルプログレスバー閉じる
       return
     }
     this.setState({ length: max - min + 1 })
@@ -435,8 +445,8 @@ class AppConfig extends Component {
       let result = await getResultFromSplatNet2(job_num)
       let response = await uploadResultToSalmonStats(result)
     }
-    this.toggleModal()
     await AsyncStorage.setItem("@job_num:key", max.toString()) // 何故かString型にしないといけない（なぜ）
+    this.toggleModal() // モーダルプログレスバー閉じる
     return
   }
 
