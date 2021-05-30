@@ -22,20 +22,10 @@ export interface Cookies {
   [key: string]: Cookie;
 }
 
-CookieManager.get('https://salmon-stats.yuki.games/').then((cookies) => {
-  let laravel_session = cookies['laravel_session']['value'];
+CookieManager.get('https://salmon-stats.yuki.games/').then(cookies => {
+  let laravel_session = cookies.laravel_session.value;
   AsyncStorage.setItem('@laravel_session:key', laravel_session);
 });
-
-async function getOAuthURL() {
-  try {
-    let res = await fetch('https://salmonia.mydns.jp/');
-    let json = await res.json();
-    return json;
-  } catch (error) {
-    console.log(error);
-  }
-}
 
 async function getSessionToken(session_token_code, auth_code_verifier) {
   // Get Session Token
@@ -62,7 +52,7 @@ async function getSessionToken(session_token_code, auth_code_verifier) {
     body: JSON.stringify(body),
   });
   let json = await response.json();
-  let session_token = json['session_token'];
+  let session_token = json.session_token;
   console.log('SessionToken', session_token);
   return session_token;
 }
@@ -91,7 +81,7 @@ async function getAccessToken(session_token) {
     body: JSON.stringify(body),
   });
   let json = await response.json();
-  let access_token = json['access_token'];
+  let access_token = json.access_token;
   console.log('AccessToken', access_token);
   return access_token;
 }
@@ -124,7 +114,7 @@ async function callS2SAPI(access_token, timestamp, ver) {
     // body: JSON.stringify(body),
   });
   let json = await response.json();
-  let hash = json['hash'];
+  let hash = json.hash;
   console.log('s2s API(NSO)', json, hash);
   return hash;
 }
@@ -149,7 +139,7 @@ async function callFlapgAPI(access_token, guid, type, ver) {
     headers: header,
   });
   let json = await response.json();
-  let flapg = json['result'];
+  let flapg = json.result;
   console.log('flapg API(NSO)', flapg);
   return flapg;
 }
@@ -159,10 +149,10 @@ async function getSplatoonToken(flapg_nso) {
   let url = 'https://api-lp1.znc.srv.nintendo.net/v1/Account/Login';
   let body = {
     parameter: {
-      f: flapg_nso['f'],
-      naIdToken: flapg_nso['p1'],
-      timestamp: flapg_nso['p2'],
-      requestId: flapg_nso['p3'],
+      f: flapg_nso.f,
+      naIdToken: flapg_nso.p1,
+      timestamp: flapg_nso.p2,
+      requestId: flapg_nso.p3,
       naCountry: 'JP',
       naBirthday: '1990-01-01',
       language: 'ja-JP',
@@ -187,7 +177,7 @@ async function getSplatoonToken(flapg_nso) {
     body: JSON.stringify(body),
   });
   let json = await response.json();
-  let splatoon_token = json['result']['webApiServerCredential']['accessToken'];
+  let splatoon_token = json.result.webApiServerCredential.accessToken;
   console.log('Splatoon Token', splatoon_token);
   return splatoon_token;
 }
@@ -210,10 +200,10 @@ async function getSplatoonAccessToken(splatoon_token, flapg_app) {
   let body = {
     parameter: {
       id: 5741031244955648, // Splatoon Game ID
-      f: flapg_app['f'],
-      registrationToken: flapg_app['p1'],
-      timestamp: flapg_app['p2'],
-      requestId: flapg_app['p3'],
+      f: flapg_app.f,
+      registrationToken: flapg_app.p1,
+      timestamp: flapg_app.p2,
+      requestId: flapg_app.p3,
     },
   };
   let response = await fetch(url, {
@@ -222,7 +212,7 @@ async function getSplatoonAccessToken(splatoon_token, flapg_app) {
     body: JSON.stringify(body),
   });
   let json = await response.json();
-  let splatoon_access_token = json['result']['accessToken'];
+  let splatoon_access_token = json.result.accessToken;
   console.log('Splatoon Access Token', splatoon_access_token);
   return splatoon_access_token;
 }
@@ -304,15 +294,15 @@ class AppConfig extends Component {
     Linking.removeEventListener('url', this.handleOpenURL);
   }
 
-  handleOpenURL = (deeplink) => {
+  handleOpenURL = deeplink => {
     let session_token_code = deeplink.url.match('de=(.*)&')[1];
     this.loginSplatNet2(session_token_code, global.auth_code_verifier);
   };
 
   loginNintendoSwitchOnline = async () => {
     let oauth = await getOAuthURL();
-    auth_code_verifier = oauth['auth_code_verifier'];
-    Linking.openURL(oauth['auth_url']);
+    auth_code_verifier = oauth.auth_code_verifier;
+    Linking.openURL(oauth.auth_url);
   };
 
   loginSalmonStats = async () => {
@@ -330,7 +320,7 @@ class AppConfig extends Component {
       headers: header,
     });
     let api_token = await response.json();
-    await AsyncStorage.setItem('@api_token:key', api_token['api_token']);
+    await AsyncStorage.setItem('@api_token:key', api_token.api_token);
     Alert.alert('Login Success!');
   };
 
@@ -399,7 +389,7 @@ class AppConfig extends Component {
     let json = await response.json();
     // console.log(json)
     try {
-      let job_num = json['summary']['card']['job_num']; // 最新のバイトID
+      let job_num = json.summary.card.job_num; // 最新のバイトID
       console.log(job_num);
       return job_num;
     } catch {
