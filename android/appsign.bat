@@ -1,0 +1,1 @@
+apksigner sign --ks app/release.keystore -v --v2-signing-enabled true --ks-key-alias release --ks-pass pass:123456 app/build/outputs/apk/release/app-release.apk
